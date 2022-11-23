@@ -1,0 +1,67 @@
+# Импортируем необходимые бибилиотеки
+import requests as rq
+import urllib.parse as ps
+import json
+import pandas as pd
+import sys
+from datetime import datetime
+
+
+loop = 1
+y = 1
+file = pd.read_excel('adress_list.xlsx', index_col=None, usecols=[0], header=None)
+length = (len(file) - 1)
+x = file.iloc[loop]
+datetime1 = datetime.now()
+now = datetime1.strftime("%m/%d/%Y, %H:%M:%S")
+
+def my_function():
+    file1 = pd.read_excel('adress_list.xlsx', index_col=None, usecols=[0], header=None, dtype={
+        'Start adress': str})  # Из Excel файла с адресами выбираю 1 строку с адресом начала поездки и убираю лищние символы
+    start_adress = str(file1.iloc[y])
+    new_start_adress = start_adress.split()[1] + start_adress.split()[2] + start_adress.split()[3]
+    adress1 = new_start_adress
+    url = 'https://nominatim.openstreetmap.org/search/' + ps.quote(
+        adress1) + '?format=json'  # Создаем URL и парсим широту и долготу точки начала поездки
+    response = rq.get(url).json()
+    lat1 = (response[0]["lat"])
+    lon1 = (response[0]["lon"])
+    file2 = pd.read_excel('adress_list.xlsx', index_col=None, usecols=[1], header=None, dtype={
+        'Finish adress': str})  # Из Excel файла с адресами выбираю 1 строку с адресом окончания поездки и убираю лищние символы
+    end_adress = str(file2.iloc[y])
+    new_end_adress = end_adress.split()[1] + end_adress.split()[2] + end_adress.split()[3]
+    adress2 = new_end_adress
+    url = 'https://nominatim.openstreetmap.org/search/' + ps.quote(
+        str(adress2)) + '?format=json'  # Создаем URL и парсим широту и долготу точки окончания поездки
+    response = rq.get(url).json()
+    lat2 = (response[0]["lat"])
+    lon2 = (response[0]["lon"])
+    base_url = "https://taxi-routeinfo.taxi.yandex.net/taxi_info?"  # Вводим все параметры для подключения к API Яндекс Такси
+    clid = "clid=ak221114&"
+    apikey = "apikey=TVzqOxIjMmHJCAJdNiptdMlRnBIOxgQJB&"
+    rll = "rll=" + lon1 + "," + lat1 + "~" + lon2 + "," + lat2 + "&"
+    car_class = "class=econom"
+    url = ''.join([base_url, rll, clid, apikey, car_class])  # Подключаемся к API Яндекс Такси
+    result = rq.get(url).json()  # Преобразуем полученный результат в JSON формат
+    a = json.dumps(result)
+    b = json.loads(a)
+    ride_time = (b[
+        'time']) / 60  # Делю время поездки в секундах на 60 чтобы получить время в минутах и вывожу его на экран
+    c = (b['options'])  # Из JSON выбираю раздел Options
+
+    def price_per_min():
+        for i in range(len(c)):
+            if c[i]["class_level"] == 50:
+                print(round(c[i]["price"] / ride_time, 2), ', rub/min', ',', now)
+            else:
+                print("error of car class")
+
+    e = price_per_min()
+    e = '' if e is None else e
+
+sys.stdout = open('log.csv', 'a+')
+for (x) in range(length):
+    if my_function() is not None:
+        for z in my_function():
+            print(z, current_time)
+sys.stdout.close()
